@@ -2,7 +2,7 @@ import sys
 from settings.load import *
 
 def cam_to_affine_coords(u, v, z):
-    return (u-CAMERA_CX) * z * CAMERA_FX_INV, (-v+CAMERA_CY) * z * CAMERA_FY_INV, z, 1
+    return (u-CAMERA_CX) * z * CAMERA_FX_INV, (v-CAMERA_CY) * z * CAMERA_FY_INV, z, 1
 
 def estimated_distance(disparity):
     return -CAMERA_BF / disparity
@@ -19,19 +19,19 @@ def subpixel_disparity(disparity , coords):
 # in the right hand image. A low confidence (near 1) indicates there is another location where the 
 # patch also fits, and therefore the depth estimate may be wrong. 
 # The bestDistance is returned along with its nearest neighbors to facilitate subpixel disparity estimation.
-def patch_disparity(framepoint, frame_right):
-    frame_left = framepoint.frame
-    if framepoint.cy < PATCH_SIZE or framepoint.cy > frame_left.get_height() - PATCH_SIZE or \
-        framepoint.cx < PATCH_SIZE or framepoint.cx > frame_left.get_width() - PATCH_SIZE:
+def patch_disparity(obs, frame_right):
+    frame_left = obs.get_frame()
+    if obs.cy < PATCH_SIZE or obs.cy > frame_left.get_height() - PATCH_SIZE or \
+        obs.cx < PATCH_SIZE or obs.cx > frame_left.get_width() - PATCH_SIZE:
             return None, None
     best_disparity = 0
     best_distance = sys.maxsize
     distances = []
-    for disparity in range(0, framepoint.leftx):
+    for disparity in range(0, obs.leftx):
 
-        patchL = framepoint.get_patch()
-        patchR = frame_right.get_image()[framepoint.topy:framepoint.topy+PATCH_SIZE, 
-                                                                    framepoint.leftx-disparity:framepoint.leftx+PATCH_SIZE-disparity]
+        patchL = obs.get_patch()
+        patchR = frame_right.get_image()[obs.topy:obs.topy+PATCH_SIZE, 
+                                                               obs.leftx-disparity:obs.leftx+PATCH_SIZE-disparity]
         #print(patchL.shape, patchR.shape,leftxstart,patchSize, disparity)
         distance = cv2.norm(patchL, patchR, NORM)
         distances.append(distance)
@@ -43,7 +43,7 @@ def patch_disparity(framepoint, frame_right):
     minrest = sys.maxsize
     if best_disparity > 1:
         minrest = min(distances[0:best_disparity-1])
-    if best_disparity < framepoint.leftx - HALF_PATCH_SIZE - 2:
+    if best_disparity < obs.leftx - HALF_PATCH_SIZE - 2:
         minrest = min([minrest, min(distances[best_disparity+2:])])
         
     # de disparity schatting is onbetrouwbaar als die dicht bij 1 komt
@@ -54,7 +54,7 @@ def patch_disparity(framepoint, frame_right):
     # Geef de beste disparity op pixel niveau terug, met de twee neighbors om subpixel disparity uit te rekenen
     if best_disparity == 0:
         disparity = subpixel_disparity(best_disparity, [best_distance, distances[1], distances[2]])
-    elif best_disparity == framepoint.leftx -1:
+    elif best_disparity == obs.leftx -1:
         disparity = subpixel_disparity(best_disparity, [distances[best_disparity-2], distances[best_disparity-1], best_distance])
     else:
         disparity = subpixel_disparity(best_disparity, [distances[best_disparity-1], best_distance, distances[best_disparity+1]])

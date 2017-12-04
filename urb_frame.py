@@ -1,18 +1,21 @@
 from settings.load import *
-from urb_framepoint import *
+from urb_observation import *
 from urb_imageio import *
 import cv2
 import numpy as np
 from urb_filter import *
 import urbg2o
 
-def framepoints_to_numpy(frame_points):
-    fps = [(fp.matches.id, fp.matches.cx, fp.matches.cy, fp.matches.get_depth(), fp.cx, fp.cy) for fp in frame_points if fp.matches is not None]
+def observations_to_numpy(observations):
+    #fps = [(fp.get_mappoint().id, fp.get_mappoint().get_affine_coords(), fp.cx, fp.cy) for fp in observations if fp.has_mappoint()]
+    fps = [(fp.get_mappoint().get_affine_coords(), fp.cx, fp.cy) for fp in observations if fp.has_mappoint()]
+    fps =[(1,m[0], m[1], m[2], x, y) for m, x, y in fps]
     arr = np.array(fps, dtype=np.float64, order='f')
     return arr
 
 class Frame:
     def __init__(self, filepath, rightpath = None):
+        self.id = None
         self._filepath = filepath
         self._pose = None
         self._keyframe = None
@@ -30,6 +33,10 @@ class Frame:
     def set_pose(self, pose):
         self._pose = pose
         
+    def register_mappoints(self):
+        for o in self.get_observations():
+            o.register_mappoint()
+     
     def get_image(self):
         try:
             return self._image
@@ -72,14 +79,15 @@ class Frame:
 
     def compute_depth(self):
         # find the disparity for all keypoints between the left and right image
-        for kp in self.get_framepoints():
+        for kp in self.get_observations():
             kp.get_disparity(self.get_right_frame())
             
     def get_pose(self):
         if self._pose is None:
             pose = np.ndarray((4,4), dtype=np.float64, order='f')
-            fps = framepoints_to_numpy(self.get_framepoints())
+            fps = observations_to_numpy(self.get_observations())
             pointsLeft = urbg2o.poseOptimization(fps, pose)
+            #print(pointsLeft, pose)
             if pointsLeft > 10:
                 self._pose = pose
         return self._pose
@@ -88,27 +96,30 @@ class Frame:
         if self == frame_origin:
             return self.get_pose()
         else:
-            return np.dot( self.keyframe.get_pose(), self.get_pose() )
+            return np.dot( self.keyframe.get_pose_wrt(frame_origin), self.get_pose() )
     
-    def get_framepoints_xyz(self):
-        return np.array([p.get_affine_coords() for p in self.get_framepoints() if p.matches == None], dtype=np.float64, order='f')
+    def get_observations_xyz(self):
+        return np.array([p.get_affine_coords() for p in self.get_observations() if p.get_mappoint() is None], dtype=np.float64, order='f')
     
-    def get_framepoints_wc(self, frame_origin):
+    def get_observations_wc_np(self, frame_origin):
         try:
-            return self.framepoints_wc
+            return self.observations_wc
         except:
-            self.framepoints_wc = np.dot( self.get_framepoints_xyz(), np.linalg.inv(self.get_pose_wrt(frame_origin)).T )
-            return self.framepoints_wc
+            self.observations_wc = np.dot( self.get_observations_xyz(), np.linalg.inv(self.get_pose_wrt(frame_origin)).T )
+            return self.observations_wc
     
-    def filter_non_stereo(self, confidence=CONFIDENCE):
-        self._framepoints = [fp for fp in self._framepoints if fp.disparity is not None and fp.confidence > confidence]
+    def filter_observations(self, filter):
+        self._observations = [obs for obs in self.get_observations() if filter(obs)]
+    
+    def filter_not_useful(self, confidence=CONFIDENCE):
+        self.filter_observations(lambda x: x.has_mappoint() or (x.disparity is not None and x.confidence > confidence))
 
-    def filter_non_id(self):
-        self._framepoints = [fp for fp in self._framepoints if fp.id is not None]
+    def filter_non_mappoint(self):
+        self.filter_observations(lambda x: x.has_mappoint())
         
-    def get_framepoints(self):
+    def get_observations(self):
         try:
-            return self._framepoints
+            return self._observations
         except:
             zeroimage = zero_image(self.get_smoothed())
             #higher_vertical_edges = higher_vertical_edge(self.get_smoothed(), self.get_median())
@@ -131,8 +142,8 @@ class Frame:
 
             #convert from pixels in an image to KeyPoints
             keypoints = np.column_stack(np.where(veTop >= 255))
-            toppoints = [FramePointBottom(self, x, y) for y,x in keypoints]
+            toppoints = [ObservationBottom(self, x, y) for y,x in keypoints]
             keypoints = np.column_stack(np.where(veBottom >= 255))
-            bottompoints = [FramePointTop(self, x, y) for y,x in keypoints]
-            self._framepoints = toppoints + bottompoints
-            return self._framepoints
+            bottompoints = [ObservationTop(self, x, y) for y,x in keypoints]
+            self._observations = toppoints + bottompoints
+            return self._observations

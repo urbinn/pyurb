@@ -27,30 +27,30 @@ def show(img):
     plt.imshow(img)
    
 def draw_frame(frame):
-    return draw_framepoints(frame.get_framepoints())
+    return draw_observations(frame.get_observations())
 
 def draw_frame_depth(frame):
-    return draw_framepoints_depth(frame.get_framepoints())
+    return draw_observations_depth(frame.get_observations())
 
 def draw_frame_id(frame):
-    return draw_framepoints_id(frame.get_framepoints())
+    return draw_observations_id(frame.get_observations())
 
-def draw_framepoints(framepoints):
+def draw_observations(framepoints):
     img = framepoints[0].frame.get_image()
     img = cv2.drawKeypoints(img,[kp.get_keypoint() for kp in framepoints],None,color=(0,255,0), flags=0)
     return img
 
-def draw_framepoints_depth(framepoints):
-    img = draw_framepoints(framepoints)
-    for p in framepoints:
+def draw_observations_depth(observations):
+    img = draw_observations(observations)
+    for p in observations:
         if p.get_depth() is not None:
             text = '%.1f'%(p.get_depth())
             cv2.putText(img, text, (int(p.cx), int(p.cy)), FONT, FONTSIZE, (255, 0, 0), 1, cv2.LINE_AA)
     return img
 
-def draw_frame_xyz(framepoints):
+def draw_frame_xyz(frame):
     img = draw_frame(frame)
-    for p in frame.get_framepoints():
+    for p in frame.get_observations():
         if p.get_depth() is not None:
             x, y, z, _ = p.get_affine_coords()
             text = '(%0.1f,%0.1f,%0.1f)'%(x, y, z)
@@ -60,7 +60,7 @@ def draw_frame_xyz(framepoints):
 def draw_frame_t(frame, t):
     tinv = np.linalg.inv(t)
     img = draw_frame(frame)
-    for p in frame.get_framepoints():
+    for p in frame.get_observations():
         if p.get_depth() is not None:
             x, y, z, _ = tinv * p.get_affine_coords()
             text = '(%0.1f,%0.1f,%0.1f)'%(x, y, z)
@@ -68,11 +68,11 @@ def draw_frame_t(frame, t):
     return img
 
 def draw_frame_xyz(frame):
-    return draw_framepoints_xyz(frame.get_framepoints())
+    return draw_framepoints_xyz(frame.get_observations())
 
-def draw_framepoints_d3(framepoints):
-    img = draw_framepoints(framepoints)
-    for p in framepoints:
+def draw_observations_d3(observations):
+    img = draw_observations(observations)
+    for p in observations:
         if p.get_depth() is not None:
             x, y, z, _ = p.get_affine_coords()
             d = math.sqrt(x * x + y * y + z * z)
@@ -81,14 +81,14 @@ def draw_framepoints_d3(framepoints):
     return img
 
 def draw_compare_id(frame1, frame2, id):
-    p1 = [p for p in frame1.get_framepoints() if p.id == id]
-    p2 = [p for p in frame2.get_framepoints() if p.id == id]
-    show2(draw_framepoints_depth(p1), draw_framepoints_depth(p2))
+    p1 = [p for p in frame1.get_observations() if p.id == id]
+    p2 = [p for p in frame2.get_observations() if p.id == id]
+    show2(draw_observations_depth(p1), draw_observations_depth(p2))
 
-def draw_framepoints_id(framepoints):
-    img = draw_framepoints(framepoints)
-    for p in framepoints:
-        id = p.matches.id if p.matches is not None else p.id
+def draw_observations_id(observations):
+    img = draw_observations(observations)
+    for p in observations:
+        id = p.get_mappoint_id()
         if id is not None:
             cv2.putText(img, str(id), (int(p.cx), int(p.cy)), FONT, FONTSIZE, (255, 0, 0), 1, cv2.LINE_AA)
     return img
