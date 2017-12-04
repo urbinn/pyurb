@@ -1,5 +1,4 @@
-from urb_constants import *
-import sys
+from settings.load import *
 from urb_coords import *
 from urb_imageio import *
 
@@ -70,14 +69,17 @@ class FramePoint:
     
     def get_keypoint(self):
         return self.keypoint
-    
+        
 class FramePointTop(FramePoint):
     def __init__(self, frame, x, y):
         FramePoint.__init__(self, frame, x, y)
         self.topy = self.cy
 
+    
 class FramePointBottom(FramePoint):
     def __init__(self, frame, x, y):
         FramePoint.__init__(self, frame, x, y)
         self.topy = self.cy - PATCH_SIZE
-        
+ 
+
+

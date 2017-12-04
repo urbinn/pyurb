@@ -1,10 +1,8 @@
+from settings.load import *
 import cv2
 import math
 import matplotlib.pyplot as plt
 import numpy as np
-from urb_constants import *
-import mpld3
-from mpld3 import plugins
 
 FONT = cv2.FONT_HERSHEY_PLAIN
 FONTSIZE = 2
@@ -69,7 +67,6 @@ def draw_frame_t(frame, t):
             cv2.putText(img, text, (int(p.cx), int(p.cy)), FONT, FONTSIZE, (255, 0, 0), 1, cv2.LINE_AA)
     return img
 
-
 def draw_frame_xyz(frame):
     return draw_framepoints_xyz(frame.get_framepoints())
 
@@ -83,23 +80,17 @@ def draw_framepoints_d3(framepoints):
             cv2.putText(img, text, (int(p.cx), int(p.cy)), FONT, FONTSIZE, (255, 0, 0), 1, cv2.LINE_AA)
     return img
 
-
 def draw_compare_id(frame1, frame2, id):
     p1 = [p for p in frame1.get_framepoints() if p.id == id]
     p2 = [p for p in frame2.get_framepoints() if p.id == id]
     show2(draw_framepoints_depth(p1), draw_framepoints_depth(p2))
 
-def draw_keyframepoints_id(framepoints):
-    img = draw_framepoints(framepoints)
-    for p in framepoints:
-         cv2.putText(img, str(p.id), (int(p.cx), int(p.cy)), FONT, FONTSIZE, (255, 0, 0), 1, cv2.LINE_AA)
-    return img
-
 def draw_framepoints_id(framepoints):
     img = draw_framepoints(framepoints)
     for p in framepoints:
-        if p.matches is not None:
-            cv2.putText(img, str(p.matches.id), (int(p.cx), int(p.cy)), FONT, FONTSIZE, (255, 0, 0), 1, cv2.LINE_AA)
+        id = p.matches.id if p.matches is not None else p.id
+        if id is not None:
+            cv2.putText(img, str(id), (int(p.cx), int(p.cy)), FONT, FONTSIZE, (255, 0, 0), 1, cv2.LINE_AA)
     return img
 
 def get_patch(image, leftx, topy, patch_size = PATCH_SIZE):

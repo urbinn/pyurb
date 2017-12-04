@@ -1,5 +1,5 @@
 import sys
-from urb_constants import *
+from settings.load import *
 
 def cam_to_affine_coords(u, v, z):
     return (u-CAMERA_CX) * z * CAMERA_FX_INV, (-v+CAMERA_CY) * z * CAMERA_FY_INV, z, 1

@@ -1,9 +1,12 @@
+from settings.load import *
+from urb_frame import *
+from urb_framepoint import *
+from urb_json import *
 import sys
 import os
 import shutil
 import urbg2o
 import numpy as np
-from urb_frame import *
 
 def save_keyframepoints(filename, keyFramePoints):
     with open(filename, 'w') as fout:
@@ -53,16 +56,22 @@ class Sequence:
         self.framepointcount = 0
         self.keyframes = []
 
-    def add_frame(self, frame, confidence_threshold = 1.4):
+    def add_frame(self, frame, confidence_threshold = 1.4, clean=False):
         if len(self.keyframes) == 0:
             frame.compute_depth()
             frame.filter_non_stereo()
             self.add_keyframe(frame)
-            frame.pose = np.eye(4, dtype=np.float64)
+            frame.set_pose( np.eye(4, dtype=np.float64) )
         else:
             keyframe = self.keyframes[-1]
             match_frame(frame, keyframe.get_framepoints(), confidence_threshold = confidence_threshold)
+            #print(frame.get_pose())
+            # make the former frame into a keyframe
             if frame.get_pose() is None:
+                if clean:
+                    for f in keyframe.frames[:-1]:
+                        f.clean()
+                    keyframe.clean()
                 keyframe = keyframe.frames.pop()
                 keyframe.compute_depth()
                 keyframe.filter_non_stereo()
