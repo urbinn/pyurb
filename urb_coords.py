@@ -4,6 +4,12 @@ from settings.load import *
 def cam_to_affine_coords(u, v, z):
     return (u-CAMERA_CX) * z * CAMERA_FX_INV, (v-CAMERA_CY) * z * CAMERA_FY_INV, z, 1
 
+def affine_coords_to_cam(coords):
+    z = coords[2]
+    x = coords[0] * CAMERA_FX / z + CAMERA_CX
+    y = coords[1] * CAMERA_FY / z + CAMERA_CY
+    return x, y, z
+
 def estimated_distance(disparity):
     return -CAMERA_BF / disparity
 

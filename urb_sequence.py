@@ -1,3 +1,4 @@
+from progressbar import ProgressBar
 from settings.load import *
 from urb_frame import *
 from urb_json import *
@@ -13,32 +14,36 @@ def matching_framepoint(o, observations):
          return (0, None)
     best_distance = sys.maxsize
     next_best_distance = sys.maxsize
-    best_frame_point = None
+    best_observation = None
     for kp in observations:
-        distance = kp.get_patch_distance(o)
-        if distance < best_distance:
-            next_best_distance = best_distance
-            best_distance = distance
-            best_frame_point = kp
-        elif distance < next_best_distance:
-            next_best_distance = distance
+        if type(kp) is type(o):
+            distance = kp.get_patch_distance(o)
+            if distance < best_distance:
+                next_best_distance = best_distance
+                best_distance = distance
+                best_frame_point = kp
+            elif distance < next_best_distance:
+                next_best_distance = distance
     confidence = next_best_distance / (best_distance + 0.01)
     return (confidence, best_frame_point)
 
 # returns the matching keyPoints in a new frame to keyPoints in a keyFrame that exceed a confidence score
 def match_frame(frame, observations, confidence_threshold = 1.4):
-    for obs in observations:
+    matches = []
+    for i, obs in enumerate(observations):
         confidence, fp = matching_framepoint(obs, frame.get_observations())
         if confidence > confidence_threshold:
+            matches.append(fp)
             fp.set_mappoint(obs.get_mappoint())
         else:
             fp.set_mappoint(None)
+    return matches
             
-def create_sequence(frames):
+def create_sequence(frames, confidence_threshold=1.4):
     s = Sequence()
-    for i, f in enumerate(frames):
-        print('add frame ' + str(i))
-        s.add_frame(f);
+    for i, f in enumerate(ProgressBar()(frames)):
+        #print('add frame ' + str(i))
+        s.add_frame(f, confidence_threshold = confidence_threshold );
     return s
 
 class Sequence:
@@ -46,6 +51,8 @@ class Sequence:
         self.mappointcount = 0
         self.framecount = 0
         self.keyframes = []
+        self.rotation = 0
+        self.speed = 0
 
     def add_frame(self, frame, confidence_threshold = 1.4, clean=False):
         if len(self.keyframes) == 0:
@@ -53,31 +60,64 @@ class Sequence:
             frame.set_pose( np.eye(4, dtype=np.float64) )
         else:
             keyframe = self.keyframes[-1]
-            match_frame(frame, keyframe.get_observations(), confidence_threshold = confidence_threshold)
+            last_z = keyframe.frames[-1].get_pose()[2, 3] if len(keyframe.frames) > 0 else 0
+            matches = match_frame(frame, keyframe.get_observations(), confidence_threshold = confidence_threshold)
+            
+            points_left = len(matches)
+            if points_left >=10:
+                pose, points_left = get_pose(matches)
+                frame.set_pose(pose)
+                if len(self.keyframes) == 1 and len(keyframe.frames) == 0:
+                    self.speed = pose[2,3]
+                    self.rotation = pose[0,2]
+                invalid_rotation= abs(self.rotation - pose[0,2]) > 0.2
+                speed = (pose[2,3] - last_z)
+                invalid_speed = speed < -2 or speed > 0
+                if points_left >= 10:
+                    if invalid_rotation:
+                        print('invalid rotation', self.rotation, '\n', pose)
+                    if invalid_speed:
+                        print('invalid speed', speed, self.speed, '\n', pose)
+
+            #print(len(matches), frame.get_pose())
             # make the former frame into a keyframe
-            if frame.get_pose() is None:
+            if points_left < 10 or invalid_rotation or invalid_speed:
                 if clean:
                     for f in keyframe.frames[:-1]:
                         f.clean()
                     keyframe.clean()
                 keyframe = keyframe.frames.pop()
                 self.add_keyframe( keyframe )
-                match_frame(frame, keyframe.get_observations(), confidence_threshold = confidence_threshold)
-                if frame.get_pose() is None:
+                matches = match_frame(frame, keyframe.get_observations(), confidence_threshold = confidence_threshold)
+                pose, points_left = get_pose(matches)
+                frame.set_pose(pose) 
+                speed = (pose[2,3] - last_z)
+
+                if points_left < 10:
                     print('WARNING: invalid pose estimation')
+                    print(len(matches), pose)
+            self.speed = (self.speed + self.speed + speed)/3
+            self.rotation = (self.rotation + self.rotation + pose[0,2])/3
             frame.keyframe = keyframe
             keyframe.frames.append(frame)
                 
     def add_keyframe(self, frame):
         frame.compute_depth()
         frame.filter_not_useful()
+        frame.filter_most_confident()
         for obs in frame.get_observations():
             if not obs.has_mappoint():
                 obs.create_mappoint(self.mappointcount)
                 self.mappointcount += 1
+            else:
+                obs.register_mappoint()
+                if obs.get_depth() is None:
+                    acoords = frame.get_pose() * obs.get_mappoint().get_affine_coords()
+                    obs.z = affine_coords_to_cam(acoords)
+                else:
+                    obs.get_mappoint().update_affine_coords(obs)
         frame.id = self.framecount
         self.framecount += 1
-        frame.register_mappoints()
         self.keyframes.append(frame)
         frame.frames = []
             

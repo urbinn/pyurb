@@ -2,6 +2,7 @@ from settings.load import *
 from urb_coords import *
 from urb_imageio import *
 from urb_mappoint import *
+import sys
 
 class Observation:
     def __init__(self, frame, x, y):
@@ -52,14 +53,6 @@ class Observation:
     def get_patch_distance(self, keypoint):
         return cv2.norm(self.get_patch(), keypoint.get_patch(), NORM)
     
-    def get_patch_distanceM(self, keypoint, x, y):
-        patch = get_patch(keypoint.get_frame().get_smoothed(), keypoint.leftx + x, keypoint.topy + y)
-        return cv2.norm(self.get_patch(), patch, NORM)
-    
-    def get_mono_patch_distance_m(self, keypoint, x, y):
-        patch = get_patch(keypoint.get_frame().get_smoothed(), keypoint.leftx + x  + HALF_PATCH_SIZE - MONO_HALF_PATCH_SIZE, keypoint.topy + y, MONO_PATCH_SIZE)
-        return cv2.norm(self.get_mono_patch(), patch, NORM)
-    
     def get_disparity(self, frameRight):
         if self.disparity is None:
             self.confidence, self.disparity = patch_disparity(self, frameRight)
@@ -80,13 +73,27 @@ class Observation:
     def get_keypoint(self):
         return self.keypoint
         
-class ObservationTop(Observation):
+# OpenCV reverses coordinates, so the observation on top of an edge has a smaller y coordinate than the bottom of the same vertical edge
+class ObservationTopRight(Observation):
     def __init__(self, frame, x, y):
         Observation.__init__(self, frame, x, y)
-        self.topy = self.cy
+        self.topy = self.cy - 1
+        self.leftx = self.cx - 1
 
-class ObservationBottom(Observation):
+class ObservationTopLeft(Observation):
     def __init__(self, frame, x, y):
         Observation.__init__(self, frame, x, y)
-        self.topy = self.cy - PATCH_SIZE
- 
+        self.topy = self.cy - 1
+        self.leftx = self.cx - PATCH_SIZE + 1
+        
+class ObservationBottomLeft(Observation):
+    def __init__(self, frame, x, y):
+        Observation.__init__(self, frame, x, y)
+        self.topy = self.cy - PATCH_SIZE + 1
+        self.leftx = self.cx - PATCH_SIZE + 1
+  
+class ObservationBottomRight(Observation):
+    def __init__(self, frame, x, y):
+        Observation.__init__(self, frame, x, y)
+        self.topy = self.cy - PATCH_SIZE + 1
+        self.leftx = self.cx - 1

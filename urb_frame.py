@@ -13,6 +13,13 @@ def observations_to_numpy(observations):
     arr = np.array(fps, dtype=np.float64, order='f')
     return arr
 
+def get_pose(observations):
+    pose = np.ndarray((4,4), dtype=np.float64, order='f')
+    fps = observations_to_numpy(observations)
+    pointsLeft = urbg2o.poseOptimization(fps, pose)
+    #print(pointsLeft, pose)
+    return pose, pointsLeft
+
 class Frame:
     def __init__(self, filepath, rightpath = None):
         self.id = None
@@ -32,10 +39,6 @@ class Frame:
         
     def set_pose(self, pose):
         self._pose = pose
-        
-    def register_mappoints(self):
-        for o in self.get_observations():
-            o.register_mappoint()
      
     def get_image(self):
         try:
@@ -66,7 +69,7 @@ class Frame:
         try:
             return self._smoothed
         except:
-            self._smoothed = cv2.GaussianBlur(self.get_image(),(5,5),0)
+            self._smoothed = cv2.GaussianBlur(self.get_image(),(3,3),0)
         return self._smoothed
     
     # compute the median of the single channel pixel intensities for thresholding
@@ -83,14 +86,10 @@ class Frame:
             kp.get_disparity(self.get_right_frame())
             
     def get_pose(self):
-        if self._pose is None:
-            pose = np.ndarray((4,4), dtype=np.float64, order='f')
-            fps = observations_to_numpy(self.get_observations())
-            pointsLeft = urbg2o.poseOptimization(fps, pose)
-            #print(pointsLeft, pose)
-            if pointsLeft > 10:
-                self._pose = pose
         return self._pose
+    
+    def set_pose(self, pose):
+        self._pose = pose
     
     def get_pose_wrt(self, frame_origin):
         if self == frame_origin:
@@ -114,6 +113,16 @@ class Frame:
     def filter_not_useful(self, confidence=CONFIDENCE):
         self.filter_observations(lambda x: x.has_mappoint() or (x.disparity is not None and x.confidence > confidence))
 
+    def filter_most_confident(self):
+        self.filter_observations(lambda x: x.disparity is not None)
+        self._observations.sort(key = lambda x: -x.confidence)
+        seen = set()
+        keep = []
+        for o in self._observations:
+            if (o.cx, o.cy) not in seen:
+                keep.append(o)
+        self._observations = keep
+        
     def filter_non_mappoint(self):
         self.filter_observations(lambda x: x.has_mappoint())
         
@@ -129,12 +138,14 @@ class Frame:
 
             veTop = top_vertical_edge(higher_vertical_edges)
             veBottom = bottom_vertical_edge(lower_vertical_edges)
-            veTop[0:PATCH_SIZE,:] = zeroimage[0:PATCH_SIZE,:]
-            veTop[:,:HALF_PATCH_SIZE] = zeroimage[:,:HALF_PATCH_SIZE]
-            veTop[:,-HALF_PATCH_SIZE:] = zeroimage[:,-HALF_PATCH_SIZE:]
-            veBottom[-PATCH_SIZE:,:] = zeroimage[-PATCH_SIZE:,:]
-            veBottom[:,:HALF_PATCH_SIZE] = zeroimage[:,:HALF_PATCH_SIZE]
-            veBottom[:,-HALF_PATCH_SIZE:] = zeroimage[:,-HALF_PATCH_SIZE:]
+            veBottom[-1:,:] = zeroimage[-1:,:]
+            veBottom[:PATCH_SIZE,:] = zeroimage[0:PATCH_SIZE,:]
+            veBottom[:,:PATCH_SIZE+2] = zeroimage[:,:PATCH_SIZE+2]
+            veBottom[:,-PATCH_SIZE:] = zeroimage[:,-PATCH_SIZE:]
+            veTop[-PATCH_SIZE:,:] = zeroimage[-PATCH_SIZE:,:]
+            veTop[:1,:] = zeroimage[:1,:]
+            veTop[:,:PATCH_SIZE+2] = zeroimage[:,:PATCH_SIZE+2]
+            veTop[:,-PATCH_SIZE:] = zeroimage[:,-PATCH_SIZE:]
             
             # combine pixels found at the top and bottom of edges
             # results in an image where keypoints are set as pixels with a 255 intensity
@@ -142,8 +153,10 @@ class Frame:
 
             #convert from pixels in an image to KeyPoints
             keypoints = np.column_stack(np.where(veTop >= 255))
-            toppoints = [ObservationBottom(self, x, y) for y,x in keypoints]
+            bottomleftpoints = [ObservationTopLeft(self, x, y) for y,x in keypoints]
+            bottomrightpoints = [ObservationTopRight(self, x, y) for y,x in keypoints]
             keypoints = np.column_stack(np.where(veBottom >= 255))
-            bottompoints = [ObservationTop(self, x, y) for y,x in keypoints]
-            self._observations = toppoints + bottompoints
+            topleftpoints = [ObservationBottomLeft(self, x, y) for y,x in keypoints]
+            toprightpoints = [ObservationBottomRight(self, x, y) for y,x in keypoints]
+            self._observations = topleftpoints + toprightpoints + bottomleftpoints + bottomrightpoints
             return self._observations
