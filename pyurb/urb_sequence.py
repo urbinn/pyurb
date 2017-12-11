@@ -1,5 +1,5 @@
 from progressbar import ProgressBar
-from settings.load import *
+from pyurb.settings.load import *
 from pyurb.urb_frame import *
 from pyurb.urb_json import *
 import sys

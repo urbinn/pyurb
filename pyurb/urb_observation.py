@@ -1,4 +1,4 @@
-from settings.load import *
+from pyurb.settings.load import *
 from pyurb.urb_coords import *
 from pyurb.urb_imageio import *
 from pyurb.urb_mappoint import *

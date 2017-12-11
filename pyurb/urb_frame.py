@@ -1,4 +1,4 @@
-from settings.load import *
+from pyurb.settings.load import *
 from pyurb.urb_observation import *
 from pyurb.urb_imageio import *
 import cv2

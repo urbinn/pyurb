@@ -1,4 +1,4 @@
-from settings.load import *
+from pyurb.settings.load import *
 import cv2
 import math
 import matplotlib.pyplot as plt

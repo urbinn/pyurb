@@ -1,5 +1,5 @@
 import builtins
-builtins.URB_SETTINGS = 'settings.urb_settings_kitti'
+builtins.URB_SETTINGS = 'pyurb.settings.urb_settings_kitti'
 
-from settings.load import *
+from pyurb.settings.load import *
 from pyurb.urb_sequence import *

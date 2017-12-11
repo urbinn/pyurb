@@ -1,4 +1,4 @@
-from settings.urb_settings import *
+from pyurb.settings.urb_settings import *
 
 # bf is baseline * focal distance om de diepte te berekenen met formule focal distance * baseline / disparity
 ###KITTI
