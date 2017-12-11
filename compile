@@ -1,0 +1,6 @@
+rm -r bundleadjustment/build
+mkdir bundleadjustment/build
+cd bundleadjustment/build
+cmake ..
+make -j8
+cd ../..

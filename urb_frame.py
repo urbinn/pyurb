@@ -110,8 +110,8 @@ class Frame:
     def filter_observations(self, filter):
         self._observations = [obs for obs in self.get_observations() if filter(obs)]
     
-    def filter_not_useful(self, confidence=CONFIDENCE):
-        self.filter_observations(lambda x: x.has_mappoint() or (x.disparity is not None and x.confidence > confidence))
+    def filter_not_useful(self, stereo_confidence=STEREO_CONFIDENCE):
+        self.filter_observations(lambda x: x.has_mappoint() or (x.disparity is not None and x.confidence > stereo_confidence))
 
     def filter_most_confident(self):
         self.filter_observations(lambda x: x.disparity is not None)

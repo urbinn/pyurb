@@ -28,22 +28,22 @@ def matching_framepoint(o, observations):
     return (confidence, best_frame_point)
 
 # returns the matching keyPoints in a new frame to keyPoints in a keyFrame that exceed a confidence score
-def match_frame(frame, observations, confidence_threshold = 1.4):
+def match_frame(frame, observations, sequence_confidence = SEQUENCE_CONFIDENCE):
     matches = []
     for i, obs in enumerate(observations):
         confidence, fp = matching_framepoint(obs, frame.get_observations())
-        if confidence > confidence_threshold:
+        if confidence > sequence_confidence:
             matches.append(fp)
             fp.set_mappoint(obs.get_mappoint())
         else:
             fp.set_mappoint(None)
     return matches
             
-def create_sequence(frames, confidence_threshold=1.4):
+def create_sequence(frames, sequence_confidence=SEQUENCE_CONFIDENCE):
     s = Sequence()
     for i, f in enumerate(ProgressBar()(frames)):
         #print('add frame ' + str(i))
-        s.add_frame(f, confidence_threshold = confidence_threshold );
+        s.add_frame(f, sequence_confidence = sequence_confidence );
     return s
 
 class Sequence:
@@ -53,15 +53,15 @@ class Sequence:
         self.keyframes = []
         self.rotation = 0
         self.speed = 0
-
-    def add_frame(self, frame, confidence_threshold = 1.4, clean=False):
+        
+    def add_frame(self, frame, sequence_confidence = SEQUENCE_CONFIDENCE, clean=False):
         if len(self.keyframes) == 0:
             self.add_keyframe(frame)
             frame.set_pose( np.eye(4, dtype=np.float64) )
         else:
             keyframe = self.keyframes[-1]
             last_z = keyframe.frames[-1].get_pose()[2, 3] if len(keyframe.frames) > 0 else 0
-            matches = match_frame(frame, keyframe.get_observations(), confidence_threshold = confidence_threshold)
+            matches = match_frame(frame, keyframe.get_observations(), sequence_confidence = sequence_confidence)
             
             points_left = len(matches)
             if points_left >=10:
@@ -88,15 +88,21 @@ class Sequence:
                     keyframe.clean()
                 keyframe = keyframe.frames.pop()
                 self.add_keyframe( keyframe )
-                matches = match_frame(frame, keyframe.get_observations(), confidence_threshold = confidence_threshold)
+                last_z = keyframe.frames[-1].get_pose()[2, 3] if len(keyframe.frames) > 0 else 0
+                matches = match_frame(frame, keyframe.get_observations(), sequence_confidence = sequence_confidence)
                 pose, points_left = get_pose(matches)
-                frame.set_pose(pose) 
+                invalid_rotation= abs(self.rotation - pose[0,2]) > 0.2
                 speed = (pose[2,3] - last_z)
-
-                if points_left < 10:
+                invalid_speed = speed < -2 or speed > 0
+                
+                if points_left < 10 or invalid_rotation or invalid_speed:
                     print('WARNING: invalid pose estimation')
-                    print(len(matches), pose)
-            self.speed = (self.speed + self.speed + speed)/3
+                    print(len(matches), speed, pose)
+                    frame.set_pose(np.eye(4, dtype=np.float64))
+                else:
+                    frame.set_pose(pose) 
+
+            self.speed = (self.speed + self.speed + (pose[2,3] - last_z))/3
             self.rotation = (self.rotation + self.rotation + pose[0,2])/3
             frame.keyframe = keyframe
             keyframe.frames.append(frame)
