@@ -140,7 +140,7 @@ def get_covisible_keyframes(keyframe):
     return { o.get_frame() for m in mappoints for o in m.get_observations() }
 
 def get_mappoints(keyframes):
-    return { o.get_mappoint() for kf in keyframes for o in kf.get_observations() }
+    return { o.get_mappoint() for kf in keyframes for o in kf.get_observations() if o.get_mappoint() is not None }
 
 def get_fixed_keyframes(mappoints, covisible_keyframes):
     frames = { o.get_frame() for m in mappoints for o in m.get_observations() }
