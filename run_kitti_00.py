@@ -1,3 +1,5 @@
+# reken een hele sequence van KITTI door en bewaar de keyframe poses, mappoints met world coordinates, en edges tussen keyframes en mappoints
+
 import os
 os.environ['STEREO_CONFIDENCE'] = '1.6'
 os.environ['SEQUENCE_CONFIDENCE'] = '1.6'
@@ -6,7 +8,7 @@ os.environ['PATCH_SIZE'] = '17'
 import sys
 SEQUENCE = '00' if len(sys.argv) < 2 else sys.argv[1]
 
-from urb_kitti import *
+from pyurb.urb_kitti import *
 import numpy as np
 import glob
 

@@ -1,11 +1,11 @@
 from progressbar import ProgressBar
 from settings.load import *
-from urb_frame import *
-from urb_json import *
+from pyurb.urb_frame import *
+from pyurb.urb_json import *
 import sys
 import os
 import shutil
-import urbg2o
+import pyurb.urbg2o as urbg2o
 import numpy as np
 
 # returns the two best matching points in the list of keyPoints for the given query keyPoint

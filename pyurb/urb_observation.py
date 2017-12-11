@@ -1,7 +1,7 @@
 from settings.load import *
-from urb_coords import *
-from urb_imageio import *
-from urb_mappoint import *
+from pyurb.urb_coords import *
+from pyurb.urb_imageio import *
+from pyurb.urb_mappoint import *
 import sys
 
 class Observation:

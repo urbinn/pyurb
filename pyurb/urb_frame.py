@@ -1,10 +1,10 @@
 from settings.load import *
-from urb_observation import *
-from urb_imageio import *
+from pyurb.urb_observation import *
+from pyurb.urb_imageio import *
 import cv2
 import numpy as np
-from urb_filter import *
-import urbg2o
+from pyurb.urb_filter import *
+import pyurb.urbg2o as urbg2o
 
 def observations_to_numpy(observations):
     #fps = [(fp.get_mappoint().id, fp.get_mappoint().get_affine_coords(), fp.cx, fp.cy) for fp in observations if fp.has_mappoint()]
