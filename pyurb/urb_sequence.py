@@ -43,6 +43,7 @@ def create_sequence(frames, sequence_confidence=SEQUENCE_CONFIDENCE):
     s = Sequence()
     for i, f in enumerate(ProgressBar()(frames)):
         #print('add frame ' + str(i))
+        f.frameid = i
         s.add_frame(f, sequence_confidence = sequence_confidence );
     return s
 
@@ -61,23 +62,23 @@ class Sequence:
         else:
             keyframe = self.keyframes[-1]
             last_z = keyframe.frames[-1].get_pose()[2, 3] if len(keyframe.frames) > 0 else 0
+            last_rotation = keyframe.frames[-1].get_pose()[0, 2] if len(keyframe.frames) > 0 else 0
             matches = match_frame(frame, keyframe.get_observations(), sequence_confidence = sequence_confidence)
             
             points_left = len(matches)
             if points_left >=10:
                 pose, points_left = get_pose(matches)
                 frame.set_pose(pose)
-                if len(self.keyframes) == 1 and len(keyframe.frames) == 0:
-                    self.speed = pose[2,3]
-                    self.rotation = pose[0,2]
-                invalid_rotation= abs(self.rotation - pose[0,2]) > 0.2
+                rotation = pose[0,2]
+                rotation = abs(rotation - last_rotation)
+                invalid_rotation = rotation > 0.2
                 speed = (pose[2,3] - last_z)
                 invalid_speed = speed < -2 or speed > 0
                 if points_left >= 10:
                     if invalid_rotation:
-                        print('invalid rotation', self.rotation, '\n', pose)
+                        print('invalid rotation', rotation, '\n', pose)
                     if invalid_speed:
-                        print('invalid speed', speed, self.speed, '\n', pose)
+                        print('invalid speed', keyframe.frameid, frame.frameid, speed, '\n', pose)
 
             #print(len(matches), frame.get_pose())
             # make the former frame into a keyframe
@@ -89,21 +90,23 @@ class Sequence:
                 keyframe = keyframe.frames.pop()
                 self.add_keyframe( keyframe )
                 last_z = keyframe.frames[-1].get_pose()[2, 3] if len(keyframe.frames) > 0 else 0
+                last_rotation = keyframe.frames[-1].get_pose()[0, 2] if len(keyframe.frames) > 0 else 0
+
                 matches = match_frame(frame, keyframe.get_observations(), sequence_confidence = sequence_confidence)
                 pose, points_left = get_pose(matches)
-                invalid_rotation= abs(self.rotation - pose[0,2]) > 0.2
+                rotation = pose[0,2]
+                rotation = abs(rotation - last_rotation)
+                invalid_rotation= rotation > 0.2
                 speed = (pose[2,3] - last_z)
                 invalid_speed = speed < -2 or speed > 0
                 
                 if points_left < 10 or invalid_rotation or invalid_speed:
                     print('WARNING: invalid pose estimation')
-                    print(len(matches), speed, pose)
+                    print(keyframe.frameid, frame.frameid, len(matches), speed, rotation, pose)
                     frame.set_pose(np.eye(4, dtype=np.float64))
                 else:
                     frame.set_pose(pose) 
 
-            self.speed = (self.speed + self.speed + (pose[2,3] - last_z))/3
-            self.rotation = (self.rotation + self.rotation + pose[0,2])/3
             frame.keyframe = keyframe
             keyframe.frames.append(frame)
                 
@@ -122,7 +125,7 @@ class Sequence:
                     obs.z = affine_coords_to_cam(acoords)
                 else:
                     obs.get_mappoint().update_affine_coords(obs)
-        frame.id = self.framecount
+        frame.keyframeid = self.framecount
         self.framecount += 1
         self.keyframes.append(frame)
         frame.frames = []
