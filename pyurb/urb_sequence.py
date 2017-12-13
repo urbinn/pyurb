@@ -43,7 +43,6 @@ def create_sequence(frames, sequence_confidence=SEQUENCE_CONFIDENCE):
     s = Sequence()
     for i, f in enumerate(ProgressBar()(frames)):
         #print('add frame ' + str(i))
-        f.frameid = i
         s.add_frame(f, sequence_confidence = sequence_confidence );
     return s
 
@@ -73,12 +72,12 @@ class Sequence:
                 rotation = abs(rotation - last_rotation)
                 invalid_rotation = rotation > 0.2
                 speed = (pose[2,3] - last_z)
-                invalid_speed = speed < -2 or speed > 0
+                invalid_speed = speed < -4 or speed > 0
                 if points_left >= 10:
                     if invalid_rotation:
                         print('invalid rotation', rotation, '\n', pose)
                     if invalid_speed:
-                        print('invalid speed', keyframe.frameid, frame.frameid, speed, '\n', pose)
+                        print('invalid speed keyframe {} frame {} speed {}\n'.format(keyframe.frameid, frame.frameid, speed), pose)
 
             #print(len(matches), frame.get_pose())
             # make the former frame into a keyframe
@@ -98,7 +97,7 @@ class Sequence:
                 rotation = abs(rotation - last_rotation)
                 invalid_rotation= rotation > 0.2
                 speed = (pose[2,3] - last_z)
-                invalid_speed = speed < -2 or speed > 0
+                invalid_speed = speed < -4 or speed > 0
                 
                 if points_left < 10 or invalid_rotation or invalid_speed:
                     print('WARNING: invalid pose estimation')
