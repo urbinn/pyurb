@@ -137,25 +137,50 @@ class Sequence:
         for i, frame in enumerate(self.frames):
             save_framepoints(folder + '/' + str(i+1) + '.txt', frame.get_observations())
 
+# load a file with stored keyframeposes, returns keyframeid, frameid, poses
+# if the frameid is None, its an old file that does not contain the frameid
+# the poses are flattened 4x4 matrices
+def load_keyframes(file):
+    keyframes = np.load(file)
+    keyframeids = keyframes[:, 0]
+    if keyframes.shape[1] == 17: # old version, only has keyframe_ids
+        poses = keyframes[:, 1:]
+        return keyframeids, None, poses
+    else: # new version, also has frame_ids
+        frameids = keyframes[:, 1]
+        poses = keyframes[:, 2:]
+        return keyframeids, frameids, poses
+            
+# return a set of frames that share mappoints with the given keyframe
 def get_covisible_keyframes(keyframe):
     mappoints = [ o.get_mappoint() for o in keyframe.get_observations() ]
     return { o.get_frame() for m in mappoints for o in m.get_observations() }
 
+# return a set of all mappoint that are visible in the given set of keyframes
 def get_mappoints(keyframes):
     return { o.get_mappoint() for kf in keyframes for o in kf.get_observations() if o.get_mappoint() is not None }
 
+# return a set of keyframes that share mappoints with one or more of the covisible_keyframes
+# that are not in the set of covisible keyframes
 def get_fixed_keyframes(mappoints, covisible_keyframes):
     frames = { o.get_frame() for m in mappoints for o in m.get_observations() }
     return frames - covisible_keyframes
 
+# save the keyframe poses to file
+# (keyframe_id, frame_id, 4x4 pose)
 def keyframes_to_np(keyframes):
-    return np.hstack([ [ [kf.id] for kf in keyframes ], [ kf.get_pose().flatten() for kf in keyframes ] ])
+    return np.hstack([ [ [ kf.keyframeid] for kf in keyframes ], [ [kf.frameid] for kf in keyframes ], [ kf.get_pose().flatten() for kf in keyframes ] ])
 
+# save the world coordinates of mappoints to file
+# (mappoint_id, x, y, z, 1)
 def mappoints_to_np(mappoints):
     kfp = np.hstack([ [ [m.id] for m in mappoints ], [ m.get_affine_coords() for m in mappoints ] ])
     return kfp
 
+# save the edges between keyframes and mappoints
+# (mappoint_id, keyframe_id, pixel_x, pixel_y)
+# where pixel_x and pixel_y are the screen coordinates of the mappoint in the keyframe
 def links_to_np(mappoints):
-    links = [ (m.id, o.get_frame().id, o.cx, o.cy) for m in mappoints for o in m.get_observations()]
+    links = [ (m.id, o.get_frame().keyframeid, o.cx, o.cy) for m in mappoints for o in m.get_observations()]
     return np.array(links, dtype=np.float64, order='f')
 

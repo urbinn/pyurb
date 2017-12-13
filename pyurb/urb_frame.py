@@ -25,7 +25,7 @@ def get_pose(observations):
 class Frame:
     def __init__(self, filepath, rightpath = None):
         global _frameid
-        self.id = None
+        self.keyframeid = None
         self._filepath = filepath
         self._pose = None
         self._keyframe = None
