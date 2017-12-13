@@ -14,11 +14,11 @@ import glob
 
 LEFTDIR = '/data/urbinn/datasets/kitti/sequences/%02d/image_2'%(int(SEQUENCE))
 RIGHTDIR = '/data/urbinn/datasets/kitti/sequences/%02d/image_3'%(int(SEQUENCE))
-OUTDIR = 'results8chi2'
+OUTDIR = 'results8chi4'
 
 FILES = len(list(glob.glob(LEFTDIR + '/*')))
 FRAMECOUNT = FILES
-#FRAMECOUNT = 250
+#FRAMECOUNT = 50
 
 seq = Sequence()
 for frameid in range(FRAMECOUNT):

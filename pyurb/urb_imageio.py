@@ -35,8 +35,9 @@ def draw_frame_depth(frame):
 def draw_frame_id(frame):
     return draw_observations_id(frame.get_observations())
 
-def draw_observations(framepoints):
-    img = framepoints[0].frame.get_image()
+def draw_observations(framepoints, img=None):
+    if img is None:
+        img = framepoints[0].frame.get_image()
     img = cv2.drawKeypoints(img,[kp.get_keypoint() for kp in framepoints],None,color=(0,255,0), flags=0)
     return img
 
