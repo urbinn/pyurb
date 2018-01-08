@@ -1,0 +1,3 @@
+/home/14077132/notebooks/pyurb/bundleadjustment/build/CMakeFiles/rebuild_cache.dir
+/home/14077132/notebooks/pyurb/bundleadjustment/build/CMakeFiles/urbg2o.dir
+/home/14077132/notebooks/pyurb/bundleadjustment/build/CMakeFiles/edit_cache.dir

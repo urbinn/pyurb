@@ -6,7 +6,7 @@ import numpy as np
 from pyurb.urb_filter import *
 import pyurb.urbg2o as urbg2o
 
-_frameid = 0
+#_frameid = 0 uitgezet omdat dit niet werkt 
 
 def observations_to_numpy(observations):
     #fps = [(fp.get_mappoint().id, fp.get_mappoint().get_affine_coords(), fp.cx, fp.cy) for fp in observations if fp.has_mappoint()]
@@ -24,14 +24,14 @@ def get_pose(observations):
 
 class Frame:
     def __init__(self, filepath, rightpath = None):
-        global _frameid
+        #global _frameid uitgezet omdat dit niet werkt 
         self.keyframeid = None
         self._filepath = filepath
         self._pose = None
         self._keyframe = None
         self._rightpath = rightpath
-        self.frameid = _frameid
-        _frameid += 1
+        #self.frameid = _frameid uitgezet omdat dit niet werkt 
+        #_frameid += 1 uitgezet omdat dit niet werkt 
         
     def get_right_frame(self):
         try:

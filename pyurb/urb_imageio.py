@@ -3,6 +3,7 @@ import cv2
 import math
 import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.patches as mpatches
 
 FONT = cv2.FONT_HERSHEY_PLAIN
 FONTSIZE = 2
@@ -20,6 +21,12 @@ def show2(left, right):
     fig.add_subplot(1,2,2)
     plt.imshow(right)
     plt.show()
+    
+def show_with_label(img, color="red", color2="blue", label="", label2=""):
+    patch = mpatches.Patch(color=color, label=label)
+    patch1 = mpatches.Patch(color=color2, label=label2)
+    plt.legend(handles=[patch,patch1])
+    plt.imshow(img)
     
 def show(img):
     """shows a left and right stereo image side by side"""
